@@ -1,66 +1,60 @@
-#include <Arduino.h>
+#include<Arduino.h>
 #include <Wire.h>
 
+#define VCNL_ADDR 0x51
+#define PS_CONF_12 0x03
 
-#define I2C_addr 0x60
-#define PS_CONF1_2 0x03
 
-int status;
-
-int read_sensor(){
-  int data;
-  char addr; 
-  addr = I2C_addr >> 1;
-  Wire.beginTransmission(addr);
-  Wire.write(byte(0x08));
-  // Wire.write(byte(0x08));
-  // Wire.beginTransmission(addr);
-
-  // Serial.print("Read_Status:");
-  // Serial.println(status);
-  
-  // Wire.requestFrom(addr,2, true);
-  //status = Wire.endTransmission(true);
-  // data = Wire.read();
-  // data <<= 8;
-  // data |= Wire.read();
-
-  return data; 
-}
-
-void write_sensor(int cmd, int info){
-  uint8_t H=0,L=0;
-
-  Wire.beginTransmission(I2C_addr);
+int read_sensor(char cmd){
+  byte status;
+  int value = 0;
+  Wire.beginTransmission(VCNL_ADDR);
   Wire.write(byte(cmd));
-  H = info & 0xFF00;
-  H >>=8;
+  status = Wire.endTransmission(false);
+  // Serial.print("Read Status:");
+  // Serial.println(status);
+  Wire.requestFrom(VCNL_ADDR,2,true);
+  value = Wire.read();
+  value |= (Wire.read() << 8);
+  // value = valo
+  return value;
+}
+
+
+void write_sensor(char cmd, uint16_t info){
+  byte status;
+  uint8_t L=0,H=0;
   L = info & 0x00FF;
-  Wire.write(byte(L));
-  Wire.write(byte(H));
-  Serial.println(byte(H) +byte(L));
+  H = (info >>8) & 0xFF;
+  Serial.print("Written:");
+  Serial.println(info);
+  Wire.beginTransmission(VCNL_ADDR);
+  Wire.write(cmd);
+  Wire.write(L);
+  Wire.write(H);
   status = Wire.endTransmission(true);
-  Serial.print("Write_Status:");
-  Serial.println(status);
-
+  // Serial.print("Write Status:");
+  // Serial.println(status);
 }
 
-void config_sensor(){
 
+void start_config(){
+  write_sensor(PS_CONF_12, 0x1C02); // no interrupt, duty ratio 1/40, integrationtim 1.5T, PS ON;
 }
+
+
 void setup() {
-  Wire.begin();
+  Wire.begin();        // join i2c bus (address optional for master)
   Serial.begin(115200);
-
-  // put your setup code here, to run once:
+  start_config();
 }
 
 void loop() {
-  int val;
-  // write_sensor(PS_CONF1_2, 0x3C46);
+  int dist;
 
-  val = read_sensor();
-  // Serial.println(val);
-  delay(5000);
-  // put your main code here, to run repeatedly:
+  dist = read_sensor(0x08);
+  // Serial.print("Dist:");
+  Serial.println(dist);
+  delay(100);
+  
 }
